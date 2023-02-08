@@ -113,7 +113,7 @@ func (m *MockTestingT) Errorf(string, ...interface{}) {
 // the execution stops.
 // When expecting this method, the call that invokes it should use the following code:
 //
-//     assert.PanicsWithValue(t, mockTestingTFailNowCalled, func() {...})
+//	assert.PanicsWithValue(t, mockTestingTFailNowCalled, func() {...})
 func (m *MockTestingT) FailNow() {
 	m.failNowCount++
 
@@ -163,18 +163,25 @@ func Test_Mock_Chained_On(t *testing.T) {
 			Parent:          &mockedService.Mock,
 			Method:          "TheExampleMethod",
 			Arguments:       []interface{}{1, 2, 3},
-			ReturnArguments: []interface{}{0},
+			ReturnArguments: func() Arguments { return []interface{}{0} },
 			callerInfo:      []string{fmt.Sprintf("%s:%d", filename, line+2)},
 		},
 		{
 			Parent:          &mockedService.Mock,
 			Method:          "TheExampleMethod3",
 			Arguments:       []interface{}{AnythingOfType("*mock.ExampleType")},
-			ReturnArguments: []interface{}{nil},
+			ReturnArguments: func() Arguments { return []interface{}{nil} },
 			callerInfo:      []string{fmt.Sprintf("%s:%d", filename, line+4)},
 		},
 	}
-	assert.Equal(t, expectedCalls, mockedService.ExpectedCalls)
+
+	for i := 0; i < 2; i++ {
+		assert.Equal(t, expectedCalls[i].Parent, mockedService.ExpectedCalls[i].Parent)
+		assert.Equal(t, expectedCalls[i].Method, mockedService.ExpectedCalls[i].Method)
+		assert.Equal(t, expectedCalls[i].Arguments, mockedService.ExpectedCalls[i].Arguments)
+		assert.Equal(t, expectedCalls[i].callerInfo, mockedService.ExpectedCalls[i].callerInfo)
+		assert.Equal(t, expectedCalls[i].ReturnArguments(), mockedService.ExpectedCalls[i].ReturnArguments())
+	}
 }
 
 func Test_Mock_On_WithArgs(t *testing.T) {
@@ -535,19 +542,25 @@ func Test_Mock_Chained_UnsetOnlyUnsetsLastCall(t *testing.T) {
 			Parent:          &mockedService.Mock,
 			Method:          "TheExampleMethod1",
 			Arguments:       []interface{}{1, 1},
-			ReturnArguments: []interface{}{0},
+			ReturnArguments: func() Arguments { return []interface{}{0} },
 			callerInfo:      []string{fmt.Sprintf("%s:%d", filename, line+2)},
 		},
 		{
 			Parent:          &mockedService.Mock,
 			Method:          "TheExampleMethod2",
 			Arguments:       []interface{}{2, 2},
-			ReturnArguments: []interface{}{},
+			ReturnArguments: func() Arguments { return []interface{}{} },
 			callerInfo:      []string{fmt.Sprintf("%s:%d", filename, line+4)},
 		},
 	}
 	assert.Equal(t, 2, len(expectedCalls))
-	assert.Equal(t, expectedCalls, mockedService.ExpectedCalls)
+	for i := 0; i < 2; i++ {
+		assert.Equal(t, expectedCalls[i].Parent, mockedService.ExpectedCalls[i].Parent)
+		assert.Equal(t, expectedCalls[i].Method, mockedService.ExpectedCalls[i].Method)
+		assert.Equal(t, expectedCalls[i].Arguments, mockedService.ExpectedCalls[i].Arguments)
+		assert.Equal(t, expectedCalls[i].callerInfo, mockedService.ExpectedCalls[i].callerInfo)
+		assert.Equal(t, expectedCalls[i].ReturnArguments(), mockedService.ExpectedCalls[i].ReturnArguments())
+	}
 }
 
 func Test_Mock_UnsetIfAlreadyUnsetFails(t *testing.T) {
@@ -616,20 +629,27 @@ func Test_Mock_UnsetByOnMethodSpecAmongOthers(t *testing.T) {
 			Method:          "TheExampleMethodVariadic",
 			Repeatability:   1,
 			Arguments:       []interface{}{1, 2, 3, 4, 5},
-			ReturnArguments: []interface{}{nil},
+			ReturnArguments: func() Arguments { return []interface{}{nil} },
 			callerInfo:      []string{fmt.Sprintf("%s:%d", filename, line+4)},
 		},
 		{
 			Parent:          &mockedService.Mock,
 			Method:          "TheExampleMethodFuncType",
 			Arguments:       []interface{}{Anything},
-			ReturnArguments: []interface{}{nil},
+			ReturnArguments: func() Arguments { return []interface{}{nil} },
 			callerInfo:      []string{fmt.Sprintf("%s:%d", filename, line+7)},
 		},
 	}
 
 	assert.Equal(t, 2, len(mockedService.ExpectedCalls))
-	assert.Equal(t, expectedCalls, mockedService.ExpectedCalls)
+	for i := 0; i < 2; i++ {
+		assert.Equal(t, expectedCalls[i].Parent, mockedService.ExpectedCalls[i].Parent)
+		assert.Equal(t, expectedCalls[i].Method, mockedService.ExpectedCalls[i].Method)
+		assert.Equal(t, expectedCalls[i].Repeatability, mockedService.ExpectedCalls[i].Repeatability)
+		assert.Equal(t, expectedCalls[i].Arguments, mockedService.ExpectedCalls[i].Arguments)
+		assert.Equal(t, expectedCalls[i].callerInfo, mockedService.ExpectedCalls[i].callerInfo)
+		assert.Equal(t, expectedCalls[i].ReturnArguments(), mockedService.ExpectedCalls[i].ReturnArguments())
+	}
 }
 
 func Test_Mock_Unset_WithFuncPanics(t *testing.T) {
@@ -660,9 +680,9 @@ func Test_Mock_Return(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 1, call.ReturnArguments[0])
-	assert.Equal(t, "two", call.ReturnArguments[1])
-	assert.Equal(t, true, call.ReturnArguments[2])
+	assert.Equal(t, 1, call.ReturnArguments()[0])
+	assert.Equal(t, "two", call.ReturnArguments()[1])
+	assert.Equal(t, true, call.ReturnArguments()[2])
 	assert.Equal(t, 0, call.Repeatability)
 	assert.Nil(t, call.WaitFor)
 }
@@ -710,9 +730,9 @@ func Test_Mock_Return_WaitUntil(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 1, call.ReturnArguments[0])
-	assert.Equal(t, "two", call.ReturnArguments[1])
-	assert.Equal(t, true, call.ReturnArguments[2])
+	assert.Equal(t, 1, call.ReturnArguments()[0])
+	assert.Equal(t, "two", call.ReturnArguments()[1])
+	assert.Equal(t, true, call.ReturnArguments()[2])
 	assert.Equal(t, 0, call.Repeatability)
 	assert.Equal(t, ch, call.WaitFor)
 }
@@ -735,9 +755,9 @@ func Test_Mock_Return_After(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 1, call.ReturnArguments[0])
-	assert.Equal(t, "two", call.ReturnArguments[1])
-	assert.Equal(t, true, call.ReturnArguments[2])
+	assert.Equal(t, 1, call.ReturnArguments()[0])
+	assert.Equal(t, "two", call.ReturnArguments()[1])
+	assert.Equal(t, true, call.ReturnArguments()[2])
 	assert.Equal(t, 0, call.Repeatability)
 	assert.NotEqual(t, nil, call.WaitFor)
 
@@ -764,7 +784,7 @@ func Test_Mock_Return_Run(t *testing.T) {
 
 	assert.Equal(t, "TheExampleMethod3", call.Method)
 	assert.Equal(t, AnythingOfType("*mock.ExampleType"), call.Arguments[0])
-	assert.Equal(t, nil, call.ReturnArguments[0])
+	assert.Equal(t, nil, call.ReturnArguments()[0])
 	assert.Equal(t, 0, call.Repeatability)
 	assert.NotEqual(t, nil, call.WaitFor)
 	assert.NotNil(t, call.Run)
@@ -794,7 +814,7 @@ func Test_Mock_Return_Run_Out_Of_Order(t *testing.T) {
 
 	assert.Equal(t, "TheExampleMethod3", call.Method)
 	assert.Equal(t, AnythingOfType("*mock.ExampleType"), call.Arguments[0])
-	assert.Equal(t, nil, call.ReturnArguments[0])
+	assert.Equal(t, nil, call.ReturnArguments()[0])
 	assert.Equal(t, 0, call.Repeatability)
 	assert.NotEqual(t, nil, call.WaitFor)
 	assert.NotNil(t, call.Run)
@@ -817,9 +837,9 @@ func Test_Mock_Return_Once(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 1, call.ReturnArguments[0])
-	assert.Equal(t, "two", call.ReturnArguments[1])
-	assert.Equal(t, true, call.ReturnArguments[2])
+	assert.Equal(t, 1, call.ReturnArguments()[0])
+	assert.Equal(t, "two", call.ReturnArguments()[1])
+	assert.Equal(t, true, call.ReturnArguments()[2])
 	assert.Equal(t, 1, call.Repeatability)
 	assert.Nil(t, call.WaitFor)
 }
@@ -842,9 +862,9 @@ func Test_Mock_Return_Twice(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 1, call.ReturnArguments[0])
-	assert.Equal(t, "two", call.ReturnArguments[1])
-	assert.Equal(t, true, call.ReturnArguments[2])
+	assert.Equal(t, 1, call.ReturnArguments()[0])
+	assert.Equal(t, "two", call.ReturnArguments()[1])
+	assert.Equal(t, true, call.ReturnArguments()[2])
 	assert.Equal(t, 2, call.Repeatability)
 	assert.Nil(t, call.WaitFor)
 }
@@ -867,9 +887,9 @@ func Test_Mock_Return_Times(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 1, call.ReturnArguments[0])
-	assert.Equal(t, "two", call.ReturnArguments[1])
-	assert.Equal(t, true, call.ReturnArguments[2])
+	assert.Equal(t, 1, call.ReturnArguments()[0])
+	assert.Equal(t, "two", call.ReturnArguments()[1])
+	assert.Equal(t, true, call.ReturnArguments()[2])
 	assert.Equal(t, 5, call.Repeatability)
 	assert.Nil(t, call.WaitFor)
 }
@@ -891,7 +911,7 @@ func Test_Mock_Return_Nothing(t *testing.T) {
 	assert.Equal(t, "A", call.Arguments[0])
 	assert.Equal(t, "B", call.Arguments[1])
 	assert.Equal(t, true, call.Arguments[2])
-	assert.Equal(t, 0, len(call.ReturnArguments))
+	assert.Equal(t, 0, len(call.ReturnArguments()))
 }
 
 func Test_Mock_Return_NotBefore_In_Order(t *testing.T) {
@@ -1079,7 +1099,7 @@ func Test_Mock_Return_NotBefore_Orphan_Call(t *testing.T) {
 		mockedService.
 			On("TheExampleMethod2", true).
 			Return().
-			NotBefore(&Call{Method: "Not", Arguments: Arguments{"how", "it's"}, ReturnArguments: Arguments{"done"}})
+			NotBefore(&Call{Method: "Not", Arguments: Arguments{"how", "it's"}, ReturnArguments: func() Arguments { return Arguments{"done"} }})
 	})
 }
 
@@ -1096,7 +1116,7 @@ func Test_Mock_findExpectedCall(t *testing.T) {
 		if assert.NotNil(t, c) {
 			assert.Equal(t, "Two", c.Method)
 			assert.Equal(t, 3, c.Arguments[0])
-			assert.Equal(t, "three", c.ReturnArguments[0])
+			assert.Equal(t, "three", c.ReturnArguments()[0])
 		}
 	}
 
@@ -1129,7 +1149,7 @@ func Test_Mock_findExpectedCall_Respects_Repeatability(t *testing.T) {
 		if assert.NotNil(t, c) {
 			assert.Equal(t, "Two", c.Method)
 			assert.Equal(t, 3, c.Arguments[0])
-			assert.Equal(t, "three", c.ReturnArguments[0])
+			assert.Equal(t, "three", c.ReturnArguments()[0])
 		}
 	}
 
@@ -1140,7 +1160,7 @@ func Test_Mock_findExpectedCall_Respects_Repeatability(t *testing.T) {
 		if assert.NotNil(t, c) {
 			assert.Equal(t, "Once", c.Method)
 			assert.Equal(t, 1, c.Arguments[0])
-			assert.Equal(t, "one", c.ReturnArguments[0])
+			assert.Equal(t, "one", c.ReturnArguments()[0])
 		}
 	}
 }
@@ -1599,7 +1619,7 @@ func Test_Mock_AssertOptional(t *testing.T) {
 }
 
 /*
-	Arguments helper methods
+Arguments helper methods
 */
 func Test_Arguments_Get(t *testing.T) {
 
